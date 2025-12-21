@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kelas Digital Kimia - Portal Guru & Siswa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Nunito', sans-serif;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fefce8; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ca8a04; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a16207; 
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-yellow-50 text-gray-800 min-h-screen flex flex-col">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-yellow-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-yellow-100 fade-in">
+            <div class="bg-yellow-500 p-8 text-center">
+                <div class="inline-block p-3 bg-white rounded-full text-yellow-600 mb-4 shadow-md">
+                    <i data-lucide="flask-conical" class="w-10 h-10"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white">Kelas Digital Kimia</h1>
+                <p class="text-yellow-100 text-sm">Masuk untuk mengakses portal</p>
+            </div>
+            
+            <div class="p-8">
+                <form onsubmit="handleLogin(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">Username / ID</label>
+                        <div class="relative">
+                            <i data-lucide="user" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
+                            <input type="text" id="login-user" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition" placeholder="Contoh: admin atau nama depan siswa" required>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-600 mb-1">Password</label>
+                        <div class="relative">
+                            <i data-lucide="lock" class="absolute left-3 top-3 w-5 h-5 text-gray-400"></i>
+                            <input type="password" id="login-pass" class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition" placeholder="Masukkan password" required>
+                        </div>
+                    </div>
+                    
+                    <div id="login-error" class="hidden text-red-500 text-sm text-center font-semibold bg-red-50 p-2 rounded">
+                        Username atau password salah!
+                    </div>
+
+                    <button type="submit" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg shadow-md transition transform hover:scale-[1.02]">
+                        MASUK
+                    </button>
+                </form>
+
+                <div class="mt-6 text-center text-xs text-gray-400">
+                    <p>Default Guru: user: <strong>admin</strong> | pass: <strong>admin123</strong></p>
+                    <p class="mt-1">Default Siswa: user: <strong>ahmad</strong> | pass: <strong>ahmad123</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD CONTENT (Hidden by default) -->
+    <div id="dashboard-content" class="hidden flex-col min-h-screen">
+        
+        <!-- Header -->
+        <header class="bg-yellow-100 border-b border-yellow-200 sticky top-0 z-50 shadow-sm">
+            <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-3 mb-4 md:mb-0">
+                    <div class="bg-yellow-500 p-2 rounded-lg text-white">
+                        <i data-lucide="flask-conical" class="w-8 h-8"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-yellow-900 leading-tight">Kelas Digital Kimia</h1>
+                        <p id="role-badge" class="text-sm text-yellow-700 font-semibold bg-yellow-200 inline-block px-2 rounded-full text-xs">Portal Guru SMA</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="text-right hidden md:block">
+                        <p id="user-display-name" class="text-lg font-bold text-yellow-900">Krislina, M.Pd.</p>
+                        <p id="user-display-sub" class="text-xs text-yellow-600">NIP. [Kosong]</p>
+                    </div>
+                    <div class="h-10 w-10 bg-yellow-300 rounded-full flex items-center justify-center text-yellow-800 font-bold border-2 border-yellow-400">
+                        <span id="user-initial">K</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <div class="flex-grow container mx-auto px-4 py-8 flex flex-col md:flex-row gap-6">
+            
+            <!-- Sidebar Navigation -->
+            <aside class="w-full md:w-64 flex-shrink-0">
+                <nav class="bg-white rounded-xl shadow-md p-4 sticky top-28">
+                    <ul class="space-y-2">
+                        <li>
+                            <button onclick="showSection('profil')" id="btn-profil" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left transition-colors duration-200 bg-yellow-50 text-yellow-700 font-bold">
+                                <i data-lucide="user"></i>
+                                <span>Profil</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('jadwal')" id="btn-jadwal" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-200">
+                                <i data-lucide="calendar-days"></i>
+                                <span>Jadwal</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('perangkat')" id="btn-perangkat" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-200">
+                                <i data-lucide="briefcase"></i>
+                                <span>Perangkat Ajar</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('bahan')" id="btn-bahan" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-200">
+                                <i data-lucide="library"></i>
+                                <span>Bahan Ajar</span>
+                            </button>
+                        </li>
+                        <!-- Menu Khusus Guru -->
+                        <li class="admin-only">
+                            <button onclick="showSection('absen')" id="btn-absen" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-200">
+                                <i data-lucide="check-square"></i>
+                                <span>Absen Siswa</span>
+                            </button>
+                        </li>
+                        <li class="admin-only">
+                            <button onclick="showSection('data-siswa')" id="btn-data-siswa" class="nav-btn w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-left text-gray-600 hover:bg-yellow-50 hover:text-yellow-700 transition-colors duration-200">
+                                <i data-lucide="users"></i>
+                                <span>Data Siswa (Import)</span>
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <div class="mt-8 pt-4 border-t border-gray-100">
+                        <button onclick="logout()" class="w-full flex items-center space-x-3 px-4 py-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                            <span>Keluar</span>
+                        </button>
+                    </div>
+                </nav>
+            </aside>
+
+            <!-- Dynamic Content Area -->
+            <main class="flex-grow bg-white rounded-xl shadow-md p-6 min-h-[500px]">
+                
+                <!-- Notification Area -->
+                <div id="notification-area" class="hidden mb-4 px-4 py-3 rounded-lg text-sm font-bold transition-all duration-300"></div>
+
+                <!-- Section: Profil -->
+                <div id="profil" class="content-section fade-in">
+                    <!-- ... Profil Content (Same as before) ... -->
+                    <div class="border-b border-gray-100 pb-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Profil</h2>
+                        <p class="text-gray-500">Informasi pribadi pengguna.</p>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-8 items-start">
+                        <div class="w-full md:w-1/3 flex flex-col items-center">
+                            <div class="w-48 h-48 bg-gray-200 rounded-full flex items-center justify-center text-gray-400 mb-4 border-4 border-yellow-100">
+                                <i data-lucide="image" class="w-16 h-16"></i>
+                            </div>
+                            <button class="admin-only bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+                                Ubah Foto
+                            </button>
+                        </div>
+                        <div class="w-full md:w-2/3 space-y-4">
+                            <!-- Generic profile info based on login -->
+                            <div class="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+                                <p class="text-lg font-semibold text-gray-800" id="profile-name-detail">Krislina, M.Pd.</p>
+                                <span class="text-xs text-yellow-600 uppercase font-bold tracking-wider" id="profile-role-detail">GURU KIMIA</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Jadwal Mengajar -->
+                <div id="jadwal" class="content-section hidden fade-in">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Jadwal</h2>
+                            <p class="text-gray-500">Jadwal pelajaran semester ini.</p>
+                        </div>
+                    </div>
+                    <!-- Table placeholder (Same as before) -->
+                    <div class="text-center py-8 bg-gray-50 rounded border border-gray-100">
+                        <p class="text-gray-400">Jadwal belum tersedia.</p>
+                    </div>
+                </div>
+
+                <!-- Section: Perangkat Pembelajaran -->
+                <div id="perangkat" class="content-section hidden fade-in">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Perangkat Pembelajaran</h2>
+                        <button class="admin-only bg-yellow-500 text-white px-4 py-2 rounded-lg text-sm font-semibold">Upload</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                         <div class="border border-gray-200 rounded-lg p-5 bg-gray-50 flex flex-col items-center justify-center min-h-[200px] border-dashed">
+                            <i data-lucide="folder-plus" class="w-10 h-10 text-gray-300 mb-2"></i>
+                            <span class="text-gray-400 font-medium">Folder Kosong</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Bahan Ajar -->
+                <div id="bahan" class="content-section hidden fade-in">
+                    <div class="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Bahan Ajar</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <!-- Card: Modul PDF -->
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group">
+                            <div class="h-2 bg-red-500"></div>
+                            <div class="p-6">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="p-3 bg-red-50 rounded-lg text-red-600">
+                                        <i data-lucide="file-text" class="w-6 h-6"></i>
+                                    </div>
+                                    <span class="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full font-bold">PDF</span>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-800 mb-2">Modul Kimia Dasar</h3>
+                                <p class="text-sm text-gray-500 mb-4">Modul pengantar kimia untuk kelas X.</p>
+                                <button class="w-full bg-red-50 text-red-600 py-2 rounded text-sm font-bold hover:bg-red-100">Download</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Absen Siswa (ADMIN ONLY) -->
+                <div id="absen" class="content-section hidden fade-in">
+                    <div class="border-b border-gray-100 pb-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Absensi Siswa</h2>
+                        <p class="text-gray-500">Kelola kehadiran siswa.</p>
+                    </div>
+                    <!-- Controls Area -->
+                    <div class="bg-yellow-50 p-4 rounded-xl border border-yellow-100 mb-6 shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                            <!-- Filter Jenjang -->
+                            <div>
+                                <label class="block text-xs font-bold text-yellow-700 mb-1">JENJANG</label>
+                                <select id="filter-jenjang" onchange="renderStudents()" class="w-full border-yellow-200 bg-white rounded-lg shadow-sm p-2.5 text-sm outline-none">
+                                    <option value="">Pilih...</option>
+                                    <option value="X">X</option>
+                                    <option value="XI">XI</option>
+                                    <option value="XII">XII</option>
+                                </select>
+                            </div>
+                            <!-- Filter Angka Kelas -->
+                            <div>
+                                <label class="block text-xs font-bold text-yellow-700 mb-1">KELAS</label>
+                                <select id="filter-angka" onchange="renderStudents()" class="w-full border-yellow-200 bg-white rounded-lg shadow-sm p-2.5 text-sm outline-none">
+                                    <option value="">Pilih...</option>
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                </select>
+                            </div>
+                            <!-- Filter Tanggal -->
+                            <div>
+                                <label class="block text-xs font-bold text-yellow-700 mb-1">TANGGAL</label>
+                                <input type="date" id="filter-tanggal" onchange="loadAttendance()" class="w-full border-yellow-200 bg-white rounded-lg shadow-sm p-2.5 text-sm text-gray-600 outline-none">
+                            </div>
+                            <!-- Buttons -->
+                            <div class="md:col-span-2 flex gap-3 justify-end">
+                                <button onclick="markAllPresent()" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2">
+                                    <i data-lucide="check-circle-2" class="w-4 h-4"></i> Hadir Semua
+                                </button>
+                                <button onclick="saveAttendance()" class="bg-green-500 hover:bg-green-600 text-white px-3 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2">
+                                    <i data-lucide="download" class="w-4 h-4"></i> Simpan
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="student-list-container" class="space-y-3">
+                        <!-- List populated by JS -->
+                        <div class="text-center py-12 bg-gray-50 rounded-xl border-dashed border-2 border-gray-200">
+                             <p class="text-gray-400">Pilih Jenjang dan Kelas untuk memuat data.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Data Siswa / Import (ADMIN ONLY) -->
+                <div id="data-siswa" class="content-section hidden fade-in">
+                    <div class="border-b border-gray-100 pb-4 mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Import Data Siswa</h2>
+                        <p class="text-gray-500">Tambah siswa baru secara massal dan generate akun otomatis.</p>
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
+                        <h4 class="font-bold text-blue-800 mb-2 flex items-center gap-2"><i data-lucide="info" class="w-4 h-4"></i> Informasi Akun Otomatis</h4>
+                        <p class="text-sm text-blue-700">Sistem akan membuat akun dengan format:</p>
+                        <ul class="list-disc list-inside text-sm text-blue-600 ml-2 mt-1">
+                            <li><strong>Username:</strong> Nama depan (huruf kecil).</li>
+                            <li><strong>Password:</strong> Nama depan + "123".</li>
+                            <li>Contoh: "Budi Santoso" -> User: <code>budi</code>, Pass: <code>budi123</code></li>
+                        </ul>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <!-- Form Area -->
+                        <div class="md:col-span-1 space-y-4">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">Pilih Jenjang</label>
+                                <select id="import-jenjang" class="w-full border-gray-300 rounded-lg p-2.5 shadow-sm text-sm">
+                                    <option value="X">Kelas X</option>
+                                    <option value="XI">Kelas XI</option>
+                                    <option value="XII">Kelas XII</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">Pilih Kelas (Angka)</label>
+                                <select id="import-angka" class="w-full border-gray-300 rounded-lg p-2.5 shadow-sm text-sm">
+                                    <option value="1">1</option>
+                                    <option value="2">2</option>
+                                    <option value="3">3</option>
+                                    <option value="4">4</option>
+                                    <option value="5">5</option>
+                                    <option value="6">6</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-1">Daftar Nama (Copy-Paste)</label>
+                                <textarea id="import-names" rows="10" class="w-full border-gray-300 rounded-lg p-3 shadow-sm text-sm" placeholder="Satu nama per baris...&#10;Contoh:&#10;Andi Saputra&#10;Budi Gunawan&#10;Citra Lestari"></textarea>
+                            </div>
+                            <button onclick="handleImport()" class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 rounded-lg shadow-md flex items-center justify-center gap-2">
+                                <i data-lucide="user-plus" class="w-5 h-5"></i>
+                                Proses Import
+                            </button>
+                        </div>
+
+                        <!-- Result Table -->
+                        <div class="md:col-span-2">
+                            <h3 class="font-bold text-gray-700 mb-3">Hasil Preview Import</h3>
+                            <div class="border rounded-lg overflow-hidden bg-white shadow-sm min-h-[300px]">
+                                <table class="w-full text-sm text-left">
+                                    <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                        <tr>
+                                            <th class="px-4 py-3">Nama Lengkap</th>
+                                            <th class="px-4 py-3">Kelas</th>
+                                            <th class="px-4 py-3 text-blue-600">Username</th>
+                                            <th class="px-4 py-3 text-blue-600">Password</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="import-preview-body" class="divide-y divide-gray-100">
+                                        <tr>
+                                            <td colspan="4" class="px-4 py-8 text-center text-gray-400 italic">
+                                                Data hasil import akan muncul di sini.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+        
+        <!-- Footer -->
+        <footer class="bg-white border-t border-gray-200 mt-8 py-6">
+            <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+                <p>&copy; 2024 Kelas Digital Kimia - Portal Pendidikan</p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // --- 1. INITIALIZATION & DATA ---
+        lucide.createIcons();
+
+        // Database Siswa (Default Sample)
+        // Disimpan di localStorage agar Login bisa mendeteksi hasil import
+        let studentsDb = JSON.parse(localStorage.getItem('studentsDb')) || [
+            { id: 1, name: "Ahmad Dahlan", jenjang: "X", angka: "1", username: "ahmad", password: "ahmad123" },
+            { id: 2, name: "Budi Santoso", jenjang: "X", angka: "1", username: "budi", password: "budi123" },
+            { id: 3, name: "Citra Kirana", jenjang: "X", angka: "1", username: "citra", password: "citra123" }
+        ];
+
+        let currentUser = null; // 'admin' or student object
+        let currentAttendance = {}; // Absensi sementara
+
+        // --- 2. LOGIN LOGIC ---
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('login-user').value.trim();
+            const pass = document.getElementById('login-pass').value.trim();
+            const errorMsg = document.getElementById('login-error');
+
+            // Cek Admin (Guru)
+            if (user === 'admin' && pass === 'admin123') {
+                currentUser = { role: 'admin', name: 'Krislina, M.Pd.', id: 'admin' };
+                showDashboard();
+                return;
+            }
+
+            // Cek Siswa (Dari Database)
+            const student = studentsDb.find(s => s.username === user && s.password === pass);
+            if (student) {
+                currentUser = { role: 'student', name: student.name, id: student.id, data: student };
+                showDashboard();
+                return;
+            }
+
+            // Gagal
+            errorMsg.classList.remove('hidden');
+            setTimeout(() => errorMsg.classList.add('hidden'), 3000);
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('hidden');
+            document.getElementById('dashboard-content').classList.add('flex'); // Ensure flex display
+
+            // Update Header Info
+            document.getElementById('user-display-name').textContent = currentUser.name;
+            document.getElementById('user-initial').textContent = currentUser.name.charAt(0);
+            
+            if (currentUser.role === 'admin') {
+                document.getElementById('role-badge').textContent = "Administrator / Guru";
+                document.getElementById('profile-role-detail').textContent = "GURU KIMIA";
+                document.getElementById('user-display-sub').textContent = "NIP. 19850101 201001 2 001";
+                
+                // Show Admin Menus
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+            } else {
+                const s = currentUser.data;
+                document.getElementById('role-badge').textContent = `Siswa Kelas ${s.jenjang}-${s.angka}`;
+                document.getElementById('profile-role-detail').textContent = "SISWA";
+                document.getElementById('user-display-sub').textContent = `NIS. ${s.id}`;
+
+                // Hide Admin Menus
+                document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+            }
+
+            // Default View
+            showSection('profil');
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('dashboard-content').classList.add('hidden');
+            document.getElementById('dashboard-content').classList.remove('flex');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+        }
+
+        // --- 3. NAVIGATION ---
+        function showSection(sectionId) {
+            // Hide all
+            document.querySelectorAll('.content-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('bg-yellow-50', 'text-yellow-700', 'font-bold');
+                btn.classList.add('text-gray-600', 'hover:bg-yellow-50', 'hover:text-yellow-700');
+            });
+
+            // Show selected
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // Highlight button
+            const btn = document.getElementById('btn-' + sectionId);
+            if(btn) {
+                btn.classList.remove('text-gray-600');
+                btn.classList.add('bg-yellow-50', 'text-yellow-700', 'font-bold');
+            }
+
+            // Re-init icons just in case
+            lucide.createIcons();
+        }
+
+
+        // --- 4. IMPORT LOGIC (MENU DATA SISWA) ---
+        function handleImport() {
+            const jenjang = document.getElementById('import-jenjang').value;
+            const angka = document.getElementById('import-angka').value;
+            const rawNames = document.getElementById('import-names').value;
+
+            if (!rawNames.trim()) {
+                showNotification("Masukkan daftar nama siswa terlebih dahulu!", false);
+                return;
+            }
+
+            const names = rawNames.split('\n').filter(n => n.trim() !== '');
+            const previewBody = document.getElementById('import-preview-body');
+            previewBody.innerHTML = ''; // Clear previous
+
+            let newStudentsCount = 0;
+
+            names.forEach(fullName => {
+                const cleanName = fullName.trim();
+                const firstName = cleanName.split(' ')[0].toLowerCase().replace(/[^a-z0-9]/g, ''); // alphanumeric only
+                
+                // Generate Credential
+                const username = firstName;
+                const password = firstName + "123";
+                
+                // Create Object
+                const newStudent = {
+                    id: Date.now() + Math.floor(Math.random() * 1000), // Random ID
+                    name: cleanName,
+                    jenjang: jenjang,
+                    angka: angka,
+                    username: username,
+                    password: password
+                };
+
+                // Add to DB
+                studentsDb.push(newStudent);
+                newStudentsCount++;
+
+                // Add to Preview Table
+                const tr = document.createElement('tr');
+                tr.className = "border-b border-gray-100 hover:bg-gray-50";
+                tr.innerHTML = `
+                    <td class="px-4 py-2 font-medium text-gray-800">${cleanName}</td>
+                    <td class="px-4 py-2 text-gray-500">${jenjang}-${angka}</td>
+                    <td class="px-4 py-2 text-blue-600 font-mono text-xs bg-blue-50 rounded px-2 w-fit">${username}</td>
+                    <td class="px-4 py-2 text-blue-600 font-mono text-xs bg-blue-50 rounded px-2 w-fit">${password}</td>
+                `;
+                previewBody.appendChild(tr);
+            });
+
+            // Save DB to LocalStorage so Login works
+            localStorage.setItem('studentsDb', JSON.stringify(studentsDb));
+
+            document.getElementById('import-names').value = ''; // Clear input
+            showNotification(`Berhasil mengimpor ${newStudentsCount} siswa ke Kelas ${jenjang}-${angka}!`, true);
+        }
+
+
+        // --- 5. ATTENDANCE LOGIC (ABSEN SISWA) ---
+        function getStorageKey(date, jenjang, angka) {
+            return `absensi_${date}_${jenjang}_${angka}`;
+        }
+
+        function loadAttendance() {
+            const jenjang = document.getElementById('filter-jenjang').value;
+            const angka = document.getElementById('filter-angka').value;
+            const selectedDate = document.getElementById('filter-tanggal').value;
+            
+            if (!jenjang || !angka || !selectedDate) return;
+
+            const key = getStorageKey(selectedDate, jenjang, angka);
+            const savedData = localStorage.getItem(key);
+            currentAttendance = savedData ? JSON.parse(savedData) : {};
+            
+            renderStudents(false);
+        }
+
+        function renderStudents(shouldResetState = true) {
+            const jenjang = document.getElementById('filter-jenjang').value;
+            const angka = document.getElementById('filter-angka').value;
+            const container = document.getElementById('student-list-container');
+            
+            if (!jenjang || !angka) {
+                container.innerHTML = `<div class="text-center py-12 bg-gray-50 rounded-xl border-dashed border-2 border-gray-200"><p class="text-gray-400">Pilih Jenjang dan Kelas.</p></div>`;
+                return;
+            }
+
+            if (shouldResetState) loadAttendance();
+
+            const filteredStudents = studentsDb.filter(s => s.jenjang === jenjang && s.angka === angka);
+            
+            if (filteredStudents.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 bg-gray-50 rounded-xl border-dashed border-2 border-gray-200"><p class="text-gray-400">Belum ada siswa di kelas ini. Silakan Import data terlebih dahulu.</p></div>`;
+                return;
+            }
+
+            let html = '';
+            filteredStudents.forEach(student => {
+                const status = currentAttendance[student.id];
+                html += `
+                <div class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm hover:shadow-md transition-shadow">
+                    <div class="flex items-center gap-4 w-full md:w-auto">
+                        <div class="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold border border-yellow-200">
+                            ${student.name.charAt(0)}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">${student.name}</h4>
+                            <span class="text-xs font-semibold bg-gray-100 text-gray-500 px-2 py-0.5 rounded">ID: ${student.username}</span>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
+                        ${renderStatusButton(student.id, 'Hadir', status)}
+                        ${renderStatusButton(student.id, 'Sakit', status)}
+                        ${renderStatusButton(student.id, 'Izin', status)}
+                        ${renderStatusButton(student.id, 'Alpa', status)}
+                    </div>
+                </div>`;
+            });
+            container.innerHTML = html;
+        }
+
+        function renderStatusButton(id, type, currentStatus) {
+            let activeClass = currentStatus === type 
+                ? (type === 'Hadir' ? "bg-green-500 text-white border-green-600" 
+                  : type === 'Sakit' ? "bg-yellow-500 text-white border-yellow-600"
+                  : type === 'Izin' ? "bg-blue-500 text-white border-blue-600"
+                  : "bg-red-500 text-white border-red-600")
+                : "bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100";
+            
+            return `<button onclick="setStatus(${id}, '${type}')" id="btn-${id}-${type}" class="flex-1 md:flex-none px-4 py-2 rounded-md text-sm font-semibold border transition-colors ${activeClass}">${type}</button>`;
+        }
+
+        function setStatus(id, status) {
+            currentAttendance[id] = status;
+            
+            // Auto Save Logic
+            const jenjang = document.getElementById('filter-jenjang').value;
+            const angka = document.getElementById('filter-angka').value;
+            const date = document.getElementById('filter-tanggal').value;
+            if(jenjang && angka && date) {
+                localStorage.setItem(getStorageKey(date, jenjang, angka), JSON.stringify(currentAttendance));
+            }
+
+            // Simple UI Update (Rerender is safer for correct classes)
+            renderStudents(false);
+        }
+
+        function markAllPresent() {
+            const jenjang = document.getElementById('filter-jenjang').value;
+            const angka = document.getElementById('filter-angka').value;
+            const filtered = studentsDb.filter(s => s.jenjang === jenjang && s.angka === angka);
+            
+            if(filtered.length === 0) return showNotification("Tidak ada siswa!", false);
+            
+            filtered.forEach(s => currentAttendance[s.id] = 'Hadir');
+            
+            const date = document.getElementById('filter-tanggal').value;
+            if(date) localStorage.setItem(getStorageKey(date, jenjang, angka), JSON.stringify(currentAttendance));
+            
+            renderStudents(false);
+            showNotification("Semua ditandai Hadir.", true);
+        }
+
+        function saveAttendance() {
+             const jenjang = document.getElementById('filter-jenjang').value;
+             const angka = document.getElementById('filter-angka').value;
+             const date = document.getElementById('filter-tanggal').value;
+             
+             if(!jenjang || !angka || !date) return showNotification("Lengkapi filter!", false);
+
+             const filtered = studentsDb.filter(s => s.jenjang === jenjang && s.angka === angka);
+             const rows = [["No", "Nama", "ID", "Status", "Tanggal"]];
+             filtered.forEach((s, i) => {
+                 rows.push([i+1, s.name, s.username, currentAttendance[s.id] || "-", date]);
+             });
+
+             let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+             const link = document.createElement("a");
+             link.setAttribute("href", encodeURI(csvContent));
+             link.setAttribute("download", `Absen_${jenjang}-${angka}_${date}.csv`);
+             document.body.appendChild(link);
+             link.click();
+             document.body.removeChild(link);
+             showNotification("Laporan diunduh!", true);
+        }
+
+        // --- 6. UTILS ---
+        function showNotification(msg, isSuccess) {
+            const notif = document.getElementById('notification-area');
+            notif.textContent = msg;
+            notif.className = `mb-4 px-4 py-3 rounded-lg text-sm font-bold transition-all duration-300 ${isSuccess ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`;
+            notif.classList.remove('hidden');
+            setTimeout(() => notif.classList.add('hidden'), 3000);
+        }
+
+        // Set default date
+        document.getElementById('filter-tanggal').valueAsDate = new Date();
+    </script>
+</body>
+</html>
