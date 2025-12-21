@@ -222,7 +222,7 @@
                     </div>
                 </div>
 
-                <!-- 4. Absensi (Admin & Siswa) -->
+                <!-- 4. Absensi (Admin & Siswa) - UPDATED -->
                 <div id="page-absen" class="page-section hidden fade-in">
                     <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <div>
@@ -253,20 +253,28 @@
                     <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 min-h-[300px]">
                         
                         <!-- Toolbar Admin -->
-                        <div class="admin-only hidden flex justify-end gap-3 mb-4">
-                            <button onclick="app.services.attendance.markAll('Hadir')" class="text-green-600 hover:bg-green-50 px-3 py-2 rounded-lg text-xs font-bold transition border border-transparent hover:border-green-100">
-                                Tandai Semua Hadir
-                            </button>
-                            <button onclick="app.handlers.exportAttendance()" class="bg-green-600 text-white hover:bg-green-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
-                                <i data-lucide="download" class="w-3 h-3"></i> Export Excel (CSV)
-                            </button>
+                        <div class="admin-only hidden flex flex-wrap justify-end gap-3 mb-4 pb-4 border-b border-slate-50">
+                            <div class="flex gap-2">
+                                <button onclick="app.services.attendance.markAll('Hadir')" class="text-green-600 hover:bg-green-50 px-3 py-2 rounded-lg text-xs font-bold transition border border-transparent hover:border-green-100 flex items-center gap-1">
+                                    <i data-lucide="check-square" class="w-3 h-3"></i> Tandai Semua Hadir
+                                </button>
+                            </div>
+                            <div class="flex gap-2 border-l pl-3 border-slate-100">
+                                <button onclick="app.handlers.resetSemester()" class="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2">
+                                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset Semester
+                                </button>
+                                <button onclick="app.handlers.exportAttendanceSemester()" class="bg-green-600 text-white hover:bg-green-700 px-3 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 shadow-md shadow-green-200">
+                                    <i data-lucide="download" class="w-3 h-3"></i> Download Rekap Semester (.csv)
+                                </button>
+                            </div>
                         </div>
 
                         <div id="attendance-list" class="space-y-3">
                             <!-- Populated JS -->
                         </div>
                         <div id="attendance-placeholder" class="text-center py-10 text-slate-400">
-                            <p>Pilih filter tanggal dan kelas untuk menampilkan data.</p>
+                            <i data-lucide="user-check" class="w-12 h-12 mx-auto mb-3 opacity-30"></i>
+                            <p>Pilih filter tanggal dan kelas untuk menampilkan atau mengedit data harian.</p>
                         </div>
                     </div>
                 </div>
@@ -464,6 +472,32 @@
                     getKey: (date, jenjang, kelas) => `absensi_${date}_${jenjang}_${kelas}`,
                     get: (date, jenjang, kelas) => app.services.storage.get(`absensi_${date}_${jenjang}_${kelas}`, {}),
                     save: (date, jenjang, kelas, data) => app.services.storage.set(`absensi_${date}_${jenjang}_${kelas}`, data),
+                    // Helper to find all dates for a class
+                    getDates: (jenjang, kelas) => {
+                        const dates = [];
+                        const pattern = new RegExp(`^absensi_(.*)_${jenjang}_${kelas}$`);
+                        for(let i = 0; i < localStorage.length; i++) {
+                            const key = localStorage.key(i);
+                            const match = key.match(pattern);
+                            if(match) {
+                                dates.push(match[1]);
+                            }
+                        }
+                        return dates.sort(); // Sort chronologically (YYYY-MM-DD works with string sort)
+                    },
+                    // Reset Semester: Delete all keys for this class
+                    reset: (jenjang, kelas) => {
+                         const pattern = new RegExp(`^absensi_(.*)_${jenjang}_${kelas}$`);
+                         const keysToRemove = [];
+                         for(let i = 0; i < localStorage.length; i++) {
+                             const key = localStorage.key(i);
+                             if(pattern.test(key)) {
+                                 keysToRemove.push(key);
+                             }
+                         }
+                         keysToRemove.forEach(k => localStorage.removeItem(k));
+                         return keysToRemove.length;
+                    },
                     markAll: (status) => {
                         const date = document.getElementById('absen-date').value;
                         const jenjang = document.getElementById('absen-jenjang').value;
@@ -1109,6 +1143,7 @@
                     app.handlers.loadAttendance(); // Rerender partial
                 },
 
+                // EXPORT DAILY
                 exportAttendance: () => {
                     const jenjang = document.getElementById('absen-jenjang').value;
                     const kelas = document.getElementById('absen-kelas').value;
@@ -1134,6 +1169,78 @@
                     a.click();
                     document.body.removeChild(a);
                     app.ui.toast("Data berhasil diunduh", "success");
+                },
+
+                // NEW: EXPORT SEMESTER RECAP
+                exportAttendanceSemester: () => {
+                    const jenjang = document.getElementById('absen-jenjang').value;
+                    const kelas = document.getElementById('absen-kelas').value;
+                    
+                    const students = app.services.students.getAll().filter(s => s.jenjang === jenjang && s.angka === kelas);
+                    const allDates = app.services.attendance.getDates(jenjang, kelas);
+                    
+                    if (allDates.length === 0) return app.ui.toast("Belum ada data absensi semester ini.", "error");
+
+                    // 1. HEADER ROW 1: Logic for merged cells simulation
+                    // "No,Nama,Tanggal,,,Rekap Kehadiran,,"
+                    // Tanggal needs (N-1) empty columns. Rekap needs 2 empty columns (S,I,A).
+                    let header1 = "No,Nama,Tanggal";
+                    for(let i=0; i < allDates.length - 1; i++) header1 += ","; // Spacing for dates
+                    header1 += ",Rekap Kehadiran,,\n";
+
+                    // 2. HEADER ROW 2: Actual column names
+                    // ",,Tgl1,Tgl2,Tgl3...,Sakit,Ijin,Alpa"
+                    let header2 = ",,";
+                    allDates.forEach(d => header2 += `${d},`);
+                    header2 += "Sakit,Ijin,Alpa\n";
+
+                    // 3. DATA ROWS
+                    let rows = "";
+                    students.forEach((s, i) => {
+                        let row = `${i+1},${s.name},`;
+                        let countS = 0, countI = 0, countA = 0;
+
+                        allDates.forEach(date => {
+                            const dailyRecord = app.services.attendance.get(date, jenjang, kelas);
+                            const status = dailyRecord[s.id];
+                            
+                            // Shorten status for CSV
+                            let shortStatus = '';
+                            if (status === 'Hadir') shortStatus = 'H';
+                            else if (status === 'Sakit') { shortStatus = 'S'; countS++; }
+                            else if (status === 'Izin') { shortStatus = 'I'; countI++; }
+                            else if (status === 'Alpa') { shortStatus = 'A'; countA++; }
+                            
+                            row += `${shortStatus},`;
+                        });
+
+                        row += `${countS},${countI},${countA}\n`;
+                        rows += row;
+                    });
+
+                    const csvContent = header1 + header2 + rows;
+                    const blob = new Blob([csvContent], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.setAttribute('hidden', '');
+                    a.setAttribute('href', url);
+                    a.setAttribute('download', `Rekap_Semester_${jenjang}-${kelas}.csv`);
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    app.ui.toast("Rekap semester berhasil diunduh!", "success");
+                },
+
+                // NEW: RESET SEMESTER
+                resetSemester: () => {
+                    const jenjang = document.getElementById('absen-jenjang').value;
+                    const kelas = document.getElementById('absen-kelas').value;
+                    
+                    if(confirm(`PERINGATAN: Anda akan menghapus SELURUH data absensi semester ini untuk kelas ${jenjang}-${kelas}.\n\nTindakan ini diperlukan untuk persiapan rapor semester baru, namun data lama akan hilang permanen.\n\nLanjutkan reset?`)) {
+                        const count = app.services.attendance.reset(jenjang, kelas);
+                        app.handlers.loadAttendance(); // Refresh UI
+                        app.ui.toast(`Reset berhasil. ${count} data hari dihapus.`, "success");
+                    }
                 }
             }
         };
