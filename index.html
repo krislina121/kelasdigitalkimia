@@ -100,11 +100,10 @@ const firebaseConfig = {
   authDomain: "kelas-digital-kimia.firebaseapp.com",
   databaseURL: "https://kelas-digital-kimia-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "kelas-digital-kimia",
-  storageBucket: "kelas-digital-kimia.firebasestorage.app",
+  storageBucket: "kelas-digital-kimia.appspot.com",
   messagingSenderId: "85696838190",
   appId: "1:85696838190:web:9af863cf55d3c153f8bdbf"
 };
-
 const appFB = initializeApp(firebaseConfig);
 const db = getDatabase(appFB);
 const auth = getAuth(appFB);
@@ -215,4 +214,5 @@ onValue(ref(db, "materials"), snap => {
 
 </body>
 </html>
+
 
