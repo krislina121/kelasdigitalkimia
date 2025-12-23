@@ -13,11 +13,9 @@
 <section id="loginPage" class="min-h-screen flex items-center justify-center">
   <form id="loginForm" class="bg-white p-6 rounded-xl shadow w-80">
     <h1 class="text-xl font-bold text-center mb-4">Login LMS</h1>
-    <input id="loginUser" type="email" required
-      placeholder="Email"
+    <input id="loginUser" type="email" required placeholder="Email"
       class="w-full border p-2 mb-2 rounded">
-    <input id="loginPass" type="password" required
-      placeholder="Password"
+    <input id="loginPass" type="password" required placeholder="Password"
       class="w-full border p-2 mb-4 rounded">
     <button class="w-full bg-blue-600 text-white py-2 rounded">
       Masuk
@@ -34,10 +32,30 @@
 </header>
 
 <nav class="mb-4 space-x-2">
+  <button onclick="UI.show('profil')" class="nav-btn">Profil</button>
   <button onclick="UI.show('materi')" class="nav-btn">Materi</button>
   <button onclick="UI.show('kuis')" class="nav-btn">Kuis</button>
   <button onclick="UI.show('absensi')" class="nav-btn admin-only">Absensi</button>
 </nav>
+
+<!-- ================= PROFIL SISWA ================= -->
+<section id="profil" class="panel hidden">
+  <h3 class="panel-title">Profil Siswa</h3>
+
+  <div class="max-w-sm">
+    <label class="text-sm">Kelas</label>
+    <select id="kelas" class="input w-full mb-2"></select>
+
+    <label class="text-sm">Nomor Absen</label>
+    <select id="absen" class="input w-full mb-3"></select>
+
+    <button onclick="Profil.save()" class="btn-primary w-full">
+      Simpan Profil
+    </button>
+  </div>
+
+  <p id="profilInfo" class="text-xs text-green-600 mt-2"></p>
+</section>
 
 <!-- ================= MATERI ================= -->
 <section id="materi" class="panel hidden">
@@ -55,22 +73,13 @@
 <!-- ================= KUIS ================= -->
 <section id="kuis" class="panel hidden">
   <h3 class="panel-title">Kuis</h3>
-
-  <div class="admin-only mb-3">
-    <input id="kuisSoal" placeholder="Soal" class="input">
-    <input id="kuisJawaban" placeholder="Jawaban Benar" class="input">
-    <button onclick="Kuis.add()" class="btn-primary">Tambah</button>
-  </div>
-
   <div id="kuisList"></div>
 </section>
 
 <!-- ================= ABSENSI ================= -->
 <section id="absensi" class="panel hidden admin-only">
   <h3 class="panel-title">Absensi</h3>
-  <p class="text-sm text-slate-500">
-    Absensi realtime aktif (khusus admin)
-  </p>
+  <p class="text-sm text-slate-500">Khusus admin (realtime)</p>
 </section>
 
 </section>
@@ -78,11 +87,11 @@
 <!-- ================= FIREBASE ================= -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, set, push, onValue } 
+import { getDatabase, ref, set, push, onValue, update }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, signOut } 
+import { getAuth, signInWithEmailAndPassword, signOut }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-import { getStorage, ref as sRef, uploadBytes, getDownloadURL } 
+import { getStorage, ref as sRef, uploadBytes, getDownloadURL }
   from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
 /* ================= CONFIG ================= */
@@ -106,28 +115,22 @@ const State = { user: null };
 /* ================= AUTH ================= */
 loginForm.onsubmit = async e => {
   e.preventDefault();
-  try {
-    const cred = await signInWithEmailAndPassword(
-      auth,
-      loginUser.value,
-      loginPass.value
-    );
+  const cred = await signInWithEmailAndPassword(
+    auth, loginUser.value, loginPass.value
+  );
 
-    const uid = cred.user.uid;
-    onValue(ref(db, "users/" + uid), snap => {
-      State.user = { uid, ...snap.val() };
-      loginPage.classList.add("hidden");
-      dashboard.classList.remove("hidden");
+  const uid = cred.user.uid;
+  onValue(ref(db, "users/" + uid), snap => {
+    State.user = { uid, ...snap.val() };
+    loginPage.classList.add("hidden");
+    dashboard.classList.remove("hidden");
 
-      if (State.user.role !== "admin") {
-        document.querySelectorAll(".admin-only")
-          .forEach(el => el.remove());
-      }
-    }, { onlyOnce: true });
+    if (State.user.role !== "admin") {
+      document.querySelectorAll(".admin-only").forEach(e => e.remove());
+    }
 
-  } catch (err) {
-    alert("Login gagal");
-  }
+    Profil.load();
+  }, { onlyOnce: true });
 };
 
 window.logout = () => signOut(auth);
@@ -135,35 +138,55 @@ window.logout = () => signOut(auth);
 /* ================= UI ================= */
 const UI = {
   show(id) {
-    document.querySelectorAll(".panel")
-      .forEach(p => p.classList.add("hidden"));
+    document.querySelectorAll(".panel").forEach(p => p.classList.add("hidden"));
     document.getElementById(id).classList.remove("hidden");
   }
 };
 
-/* ================= MATERI (STORAGE) ================= */
-const Materi = {
-  async upload() {
-    if (!materiJudul.value || !materiFile.files[0]) {
-      alert("Lengkapi judul dan file");
-      return;
+/* ================= PROFIL ================= */
+const Profil = {
+  init() {
+    kelas.innerHTML = `<option value="">Pilih Kelas</option>`;
+    for (let i = 1; i <= 10; i++) {
+      kelas.innerHTML += `<option value="${i}">${i}</option>`;
     }
 
+    absen.innerHTML = `<option value="">Pilih Absen</option>`;
+    for (let i = 1; i <= 40; i++) {
+      absen.innerHTML += `<option value="${i}">${i}</option>`;
+    }
+  },
+  load() {
+    this.init();
+    if (State.user.kelas) kelas.value = State.user.kelas;
+    if (State.user.absen) absen.value = State.user.absen;
+  },
+  async save() {
+    if (!kelas.value || !absen.value) {
+      alert("Kelas dan absen wajib diisi");
+      return;
+    }
+    await update(ref(db, "users/" + State.user.uid), {
+      kelas: kelas.value,
+      absen: absen.value
+    });
+    profilInfo.textContent = "Profil berhasil disimpan";
+  }
+};
+
+/* ================= MATERI ================= */
+const Materi = {
+  async upload() {
     const file = materiFile.files[0];
+    if (!materiJudul.value || !file) return alert("Lengkapi data");
+
     const path = `materi/${Date.now()}_${file.name}`;
     const fileRef = sRef(storage, path);
-
     await uploadBytes(fileRef, file);
     const url = await getDownloadURL(fileRef);
 
     const r = push(ref(db, "materials"));
-    await set(r, {
-      judul: materiJudul.value,
-      url,
-      file: file.name,
-      createdAt: Date.now()
-    });
-
+    await set(r, { judul: materiJudul.value, url, file: file.name });
     materiJudul.value = "";
     materiFile.value = "";
   }
@@ -176,79 +199,18 @@ onValue(ref(db, "materials"), snap => {
       <div class="border-b py-2">
         <b>${m.judul}</b>
         <a href="${m.url}" target="_blank"
-          class="text-blue-600 text-sm ml-2">Unduh</a>
-      </div>`;
-  });
-});
-
-/* ================= KUIS ================= */
-const Kuis = {
-  add() {
-    if (!kuisSoal.value || !kuisJawaban.value) {
-      alert("Lengkapi soal dan jawaban");
-      return;
-    }
-
-    const r = push(ref(db, "quizzes"));
-    set(r, {
-      soal: kuisSoal.value,
-      jawaban: kuisJawaban.value
-    });
-
-    kuisSoal.value = "";
-    kuisJawaban.value = "";
-  }
-};
-
-onValue(ref(db, "quizzes"), snap => {
-  kuisList.innerHTML = "";
-  Object.entries(snap.val() || {}).forEach(([id, q]) => {
-    kuisList.innerHTML += `
-      <div class="border-b py-2">
-        <p><b>${q.soal}</b></p>
-        ${State.user?.role === "student"
-          ? `<input class="input mt-1"
-              placeholder="Jawaban"
-              onchange="set(ref(db,'quizAnswers/${id}/${State.user.uid}'),
-              {answer:this.value,time:Date.now()})">`
-          : `<p class="text-xs text-slate-500">
-              Jawaban: ${q.jawaban}
-            </p>`
-        }
+           class="text-blue-600 text-sm ml-2">Unduh</a>
       </div>`;
   });
 });
 </script>
 
 <style>
-.nav-btn {
-  background:#334155;
-  color:#fff;
-  padding:.4rem .7rem;
-  border-radius:.4rem;
-}
-.panel {
-  background:#fff;
-  padding:1rem;
-  border-radius:.6rem;
-  box-shadow:0 2px 6px #0001;
-}
-.panel-title {
-  font-weight:700;
-  margin-bottom:.5rem;
-}
-.input {
-  border:1px solid #cbd5e1;
-  padding:.4rem;
-  border-radius:.4rem;
-  margin:.2rem;
-}
-.btn-primary {
-  background:#16a34a;
-  color:#fff;
-  padding:.4rem .7rem;
-  border-radius:.4rem;
-}
+.nav-btn{background:#334155;color:#fff;padding:.4rem .7rem;border-radius:.4rem}
+.panel{background:#fff;padding:1rem;border-radius:.6rem;box-shadow:0 2px 6px #0001}
+.panel-title{font-weight:700;margin-bottom:.5rem}
+.input{border:1px solid #cbd5e1;padding:.4rem;border-radius:.4rem}
+.btn-primary{background:#16a34a;color:#fff;padding:.4rem .7rem;border-radius:.4rem}
 </style>
 
 </body>
